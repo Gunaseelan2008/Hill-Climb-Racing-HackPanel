@@ -49,9 +49,9 @@ If you prefer not to run precompiled binaries, you can run directly using Python
 ---
 
 ## 🛡️ Antivirus Notice & Disclaimer
-Some antivirus engines (such as scans on VirusTotal) may flag game trainers or PyInstaller executables as suspicious due to heuristic detection or the use of Windows memory APIs (`OpenProcess`, `ReadProcessMemory`, `WriteProcessMemory`) required to modify game values.
-
-While the complete Python source code is provided in this repository for full transparency and code audit, users should exercise their own judgment when running third-party executables. If you prefer not to run precompiled binaries, you are encouraged to review the source code and run the trainer directly from Python using the instructions above.
+- **Antivirus Detection**: Some security engines (such as scans on VirusTotal) may flag game trainers or PyInstaller executables as suspicious due to generic heuristics or the use of Windows memory APIs (`OpenProcess`, `ReadProcessMemory`, `WriteProcessMemory`) needed to modify in-memory game values. While the full Python source code is provided for complete transparency and independent review, users should exercise their own judgment when running third-party executables. If preferred, review the source code and run the trainer directly via Python.
+- **Terms of Service**: Modifying game memory may violate the game developer's (Fingersoft) Terms of Service or End-User License Agreement. This project is intended strictly for offline, personal, and educational research purposes.
+- **Game Instability & Risk**: Direct memory manipulation can potentially cause unexpected game behavior, crashes, or corruption of local save states. Use this utility at your own risk.
 
 ---
 

@@ -179,7 +179,7 @@ class MemHelper:
     """
     Thin wrapper around ReadWriteMemory + pymem for memory I/O.
 
-    * Uses ReadWriteMemory for writes (better compatibility with anti-cheat).
+    * Uses ReadWriteMemory for writing game process memory.
     * Uses pymem for reads and pointer traversal.
     * Falls back gracefully when one library is unavailable.
     """
