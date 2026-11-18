@@ -1,8 +1,8 @@
-# Hill Climb Racing Trainer V2 – dependencies
+# Hill Climb Racing Trainer V2 – Pinned dependencies
 # Install with:  pip install -r requirements.txt
 
-ReadWriteMemory    # memory read/write (write backend)
-pymem              # memory read + pointer traversal
-psutil             # process discovery
-keyboard           # global hotkeys
-Pillow             # icon loading and image utilities
+ReadWriteMemory==0.1.5
+Pymem==1.14.0
+psutil==7.2.2
+keyboard==0.13.5
+Pillow==13.0.0
