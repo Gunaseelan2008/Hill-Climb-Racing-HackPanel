@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller / Build outputs (Upload standalone EXE to GitHub Releases)
+*.manifest
+*.spec
+build/
+dist/
+*.exe
+
+# Pre-built local folders
+Hill Climb Racing Trainer V2/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

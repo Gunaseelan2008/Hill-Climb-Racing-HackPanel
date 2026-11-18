@@ -1,0 +1,8 @@
+{
+  "game": "HillClimbRacing.exe",
+  "module": "cocos2d-win10.dll",
+  "coin": "1",
+  "diamond": "100000000",
+  "fuel": "100.00",
+  "boost": "0"
+}
