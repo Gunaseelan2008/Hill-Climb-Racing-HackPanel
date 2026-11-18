@@ -12,6 +12,7 @@ A modern, high-performance Trainer / Hack Panel for **Hill Climb Racing** (PC Ed
 - 🚀 **Boost Modification**: Multi-level pointer resolution for boost customization.
 - ⌨️ **Global In-Game Hotkeys**: Toggle mods on-the-fly while racing without switching windows.
 - 🎨 **Modern Dark UI**: Sleek glassmorphism-styled interface with native Windows 11/10 dark titlebar support.
+- 🤖 **NEAT AI Auto-Pilot**: Autonomous neural network driver using NeuroEvolution of Augmenting Topologies (NEAT) that learns and drives the car automatically (Gas & Brake) with real-time in-game decision feedback and brain save/load.
 - ⚡ **Standalone Executable**: No Python or external installation required for end-users!
 
 ---
@@ -24,8 +25,8 @@ A modern, high-performance Trainer / Hack Panel for **Hill Climb Racing** (PC Ed
 5. Enjoy the game!
 
 > **Binary Verification (v2.0)**:  
-> **File**: `HillClimbRacingTrainerV2.exe` (20.7 MB)  
-> **SHA-256**: `a2775e4737b2d18b2e9b99423b137bc8d847413d9b4f8def8e27e0eacdcdbd4b`
+> **File**: `HillClimbRacingTrainerV2.exe` (20.8 MB)  
+> **SHA-256**: `1dd1a840a8bee1ed2a681191a57e5c1d63f9fd1d3e9cd00558b9de8b85f3e61c`
 
 ---
 

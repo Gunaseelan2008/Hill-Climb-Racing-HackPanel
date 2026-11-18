@@ -12,6 +12,7 @@ Features
 * Infinite-fuel freeze thread with adjustable interval
 * Boost pointer recalibration (3 offset sets)
 * Proper cleanup on window close
+* 🤖 NEAT AI Auto-Play — neural network evolves to drive the car automatically
 
 Dependencies
 ------------
@@ -31,7 +32,7 @@ from ctypes import wintypes
 from typing import Optional, List, Tuple, Dict, Any
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, filedialog
 
 # ── optional dependencies ────────────────────────────────────────────────────
 def resource_path(relative_path: str) -> str:
@@ -73,6 +74,13 @@ try:
     KEYBOARD_AVAILABLE = True
 except Exception:
     KEYBOARD_AVAILABLE = False
+
+# ── AI modules (optional — trainer works without them) ───────────────────────
+try:
+    from ai_controller import AIController, GameStateReader
+    AI_AVAILABLE = True
+except Exception:
+    AI_AVAILABLE = False
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # DESIGN SYSTEM
@@ -128,7 +136,7 @@ class Theme:
     STATUS_HEIGHT = 28
 
     WIN_WIDTH     = 540
-    WIN_HEIGHT    = 620
+    WIN_HEIGHT    = 680
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -699,6 +707,10 @@ class TrainerApp:
         self.ctrl = TrainerController()
         self._status_after_id: Optional[str] = None
 
+        # AI controller (created if ai_controller.py is present)
+        self._ai_ctrl: Optional[Any] = AIController() if AI_AVAILABLE else None
+        self._ai_ui_poll_id: Optional[str] = None   # for after() polling
+
         self._setup_root()
         self._load_icons()
 
@@ -897,6 +909,10 @@ class TrainerApp:
         self._section_header(content, "🚀  Boosts")
         self._build_boost_card(content)
 
+        # ── Section: AI Auto-Pilot ───────────────────────────────────────────
+        self._section_header(content, "🤖  AI Auto-Pilot (NEAT)")
+        self._build_ai_card(content)
+
         # ── Bottom action bar ────────────────────────────────────────────────
         make_separator(content, color=Theme.BORDER)
         btn_bar = tk.Frame(content, bg=Theme.BG_DEEP)
@@ -1055,6 +1071,220 @@ class TrainerApp:
         )
         note.pack(anchor="w", pady=(4, 0))
 
+    def _build_ai_card(self, parent: tk.Widget) -> None:
+        card = tk.Frame(parent, bg=Theme.BG_CARD, bd=0)
+        card.pack(fill="x", padx=Theme.PAD_MD, pady=4)
+
+        strip = tk.Frame(card, bg=Theme.ACCENT2, width=4)
+        strip.pack(side="left", fill="y")
+
+        inner = tk.Frame(card, bg=Theme.BG_CARD)
+        inner.pack(side="left", fill="both", expand=True, padx=Theme.PAD_MD, pady=10)
+
+        # Header row
+        hdr_row = tk.Frame(inner, bg=Theme.BG_CARD)
+        hdr_row.pack(fill="x")
+        tk.Label(hdr_row, text="🤖  AI Auto-Pilot (NEAT)", font=Theme.FONT_LABEL,
+                 bg=Theme.BG_CARD, fg=Theme.ACCENT2).pack(side="left")
+
+        self._ai_status_badge = tk.Label(
+            hdr_row, text="OFFLINE", font=Theme.FONT_BADGE,
+            bg="#252A38", fg=Theme.TEXT_SECONDARY, padx=6, pady=1
+        )
+        self._ai_status_badge.pack(side="right")
+
+        # Stats bar
+        stats_frame = tk.Frame(inner, bg=Theme.BG_INPUT, padx=8, pady=6)
+        stats_frame.pack(fill="x", pady=(8, 6))
+
+        self._ai_gen_lbl = tk.Label(stats_frame, text="Gen: 0", font=Theme.FONT_SMALL,
+                                     bg=Theme.BG_INPUT, fg=Theme.TEXT_SECONDARY)
+        self._ai_gen_lbl.pack(side="left", padx=(0, 10))
+
+        self._ai_score_lbl = tk.Label(stats_frame, text="Score: 0", font=Theme.FONT_SMALL,
+                                       bg=Theme.BG_INPUT, fg=Theme.ACCENT)
+        self._ai_score_lbl.pack(side="left", padx=(0, 10))
+
+        self._ai_best_lbl = tk.Label(stats_frame, text="Best: 0", font=Theme.FONT_SMALL,
+                                      bg=Theme.BG_INPUT, fg=Theme.SUCCESS)
+        self._ai_best_lbl.pack(side="left", padx=(0, 10))
+
+        self._ai_gas_indicator = tk.Label(stats_frame, text="Gas ▶", font=Theme.FONT_BADGE,
+                                          bg="#1C2130", fg=Theme.TEXT_MUTED, padx=4)
+        self._ai_gas_indicator.pack(side="right", padx=2)
+
+        self._ai_brake_indicator = tk.Label(stats_frame, text="◀ Brake", font=Theme.FONT_BADGE,
+                                            bg="#1C2130", fg=Theme.TEXT_MUTED, padx=4)
+        self._ai_brake_indicator.pack(side="right", padx=2)
+
+        # Controls row
+        ctrl_row = tk.Frame(inner, bg=Theme.BG_CARD)
+        ctrl_row.pack(fill="x", pady=(2, 0))
+
+        self._ai_run_btn = DarkButton(
+            ctrl_row, "▶  Auto-Play",
+            command=self._toggle_ai_autoplay,
+            color=Theme.ACCENT2,
+            small=True,
+        )
+        self._ai_run_btn.pack(side="left", padx=(0, 4))
+
+        self._ai_train_btn = DarkButton(
+            ctrl_row, "🧬  Train (50 Pop)",
+            command=self._toggle_ai_training,
+            color="#2C3E50",
+            small=True,
+        )
+        self._ai_train_btn.pack(side="left", padx=4)
+
+        DarkButton(
+            ctrl_row, "💾  Save",
+            command=self._save_ai_brain,
+            color="#1C2130",
+            small=True,
+        ).pack(side="left", padx=4)
+
+        DarkButton(
+            ctrl_row, "📂  Load",
+            command=self._load_ai_brain,
+            color="#1C2130",
+            small=True,
+        ).pack(side="left", padx=4)
+
+        note = tk.Label(
+            inner,
+            text="Autonomous neural driver using NEAT. Auto-controls Right/Left keys in real-time.",
+            font=Theme.FONT_SMALL,
+            bg=Theme.BG_CARD,
+            fg=Theme.TEXT_MUTED,
+        )
+        note.pack(anchor="w", pady=(6, 0))
+
+    # ── AI Auto-Pilot actions ─────────────────────────────────────────────────
+
+    def _toggle_ai_autoplay(self) -> None:
+        if not AI_AVAILABLE or not self._ai_ctrl:
+            messagebox.showinfo("AI Not Available", "ai_controller module could not be loaded.")
+            return
+
+        if self._ai_ctrl.running:
+            self._ai_ctrl.stop()
+            self._ai_run_btn.config(text="▶  Auto-Play", bg=Theme.ACCENT2)
+            self._ai_train_btn.config(text="🧬  Train (50 Pop)", bg="#2C3E50")
+            self._ai_status_badge.config(text="OFFLINE", fg=Theme.TEXT_SECONDARY, bg="#252A38")
+            self._reset_ai_indicators()
+            self._set_status("AI Auto-Play stopped.", color=Theme.TEXT_SECONDARY)
+        else:
+            if self.ctrl.mem.pm:
+                self._ai_ctrl.state_reader = GameStateReader(
+                    self.ctrl.mem.pm,
+                    self.ctrl.base_address,
+                    self.ctrl.module_base,
+                )
+            brain = None
+            if os.path.exists("best_brain.json"):
+                self._ai_ctrl.load_brain("best_brain.json")
+                brain = self._ai_ctrl.brain
+
+            self._ai_ctrl.start_manual(brain=brain)
+            self._ai_run_btn.config(text="⏹  Stop AI", bg=Theme.DANGER)
+            self._ai_status_badge.config(text="AUTO-PLAY", fg=Theme.SUCCESS, bg="#113322")
+            self._set_status("AI Auto-Play active (driving car)...", color=Theme.SUCCESS)
+            self._poll_ai_stats()
+
+    def _toggle_ai_training(self) -> None:
+        if not AI_AVAILABLE or not self._ai_ctrl:
+            messagebox.showinfo("AI Not Available", "ai_controller module could not be loaded.")
+            return
+
+        if self._ai_ctrl.running:
+            self._ai_ctrl.stop()
+            self._ai_run_btn.config(text="▶  Auto-Play", bg=Theme.ACCENT2)
+            self._ai_train_btn.config(text="🧬  Train (50 Pop)", bg="#2C3E50")
+            self._ai_status_badge.config(text="OFFLINE", fg=Theme.TEXT_SECONDARY, bg="#252A38")
+            self._reset_ai_indicators()
+            self._set_status("AI Training stopped.", color=Theme.TEXT_SECONDARY)
+        else:
+            if self.ctrl.mem.pm:
+                self._ai_ctrl.state_reader = GameStateReader(
+                    self.ctrl.mem.pm,
+                    self.ctrl.base_address,
+                    self.ctrl.module_base,
+                )
+            self._ai_ctrl.start_training(pop_size=50)
+            self._ai_train_btn.config(text="⏹  Stop Training", bg=Theme.DANGER)
+            self._ai_status_badge.config(text="TRAINING", fg=Theme.ACCENT, bg="#332211")
+            self._set_status("NEAT Evolution Training started...", color=Theme.ACCENT)
+            self._poll_ai_stats()
+
+    def _poll_ai_stats(self) -> None:
+        if not self._ai_ctrl or not self._ai_ctrl.running:
+            self._reset_ai_indicators()
+            return
+
+        try:
+            gen = self._ai_ctrl.generation
+            score = self._ai_ctrl.current_score
+            best = self._ai_ctrl.best_score
+            decision = self._ai_ctrl.last_decision
+
+            self._ai_gen_lbl.config(text=f"Gen: {gen}")
+            self._ai_score_lbl.config(text=f"Score: {int(score)}")
+            self._ai_best_lbl.config(text=f"Best: {int(best)}")
+
+            if len(decision) >= 2:
+                gas_active = decision[0] > 0.5
+                brake_active = decision[1] > 0.5
+                self._ai_gas_indicator.config(
+                    bg=Theme.FUEL_ON if gas_active else "#1C2130",
+                    fg=Theme.TEXT_PRIMARY if gas_active else Theme.TEXT_MUTED,
+                )
+                self._ai_brake_indicator.config(
+                    bg=Theme.DANGER if brake_active else "#1C2130",
+                    fg=Theme.TEXT_PRIMARY if brake_active else Theme.TEXT_MUTED,
+                )
+        except Exception:
+            pass
+
+        self._ai_ui_poll_id = self.root.after(100, self._poll_ai_stats)
+
+    def _reset_ai_indicators(self) -> None:
+        if self._ai_ui_poll_id:
+            try:
+                self.root.after_cancel(self._ai_ui_poll_id)
+            except Exception:
+                pass
+            self._ai_ui_poll_id = None
+        if hasattr(self, "_ai_gas_indicator"):
+            self._ai_gas_indicator.config(bg="#1C2130", fg=Theme.TEXT_MUTED)
+            self._ai_brake_indicator.config(bg="#1C2130", fg=Theme.TEXT_MUTED)
+
+    def _save_ai_brain(self) -> None:
+        if not self._ai_ctrl:
+            return
+        path = "best_brain.json"
+        try:
+            self._ai_ctrl.save_brain(path)
+            self._set_status(f"✓ AI Brain saved to {path}", color=Theme.SUCCESS)
+        except Exception as e:
+            messagebox.showerror("Save Brain", f"Error saving brain: {e}")
+
+    def _load_ai_brain(self) -> None:
+        if not self._ai_ctrl:
+            return
+        path = "best_brain.json"
+        if not os.path.exists(path):
+            messagebox.showinfo("Load Brain", f"No saved brain found at {path}")
+            return
+        try:
+            success = self._ai_ctrl.load_brain(path)
+            if success:
+                self._set_status(f"✓ AI Brain loaded from {path}", color=Theme.SUCCESS)
+            else:
+                messagebox.showwarning("Load Brain", "Could not load brain file format.")
+        except Exception as e:
+            messagebox.showerror("Load Brain", f"Error loading brain: {e}")
+
     # ── status helpers ────────────────────────────────────────────────────────
 
     def _set_status(
@@ -1100,6 +1330,12 @@ class TrainerApp:
                 f"Attached  •  Coins: {coins:,}  •  Diamonds: {diamonds:,}",
                 color=Theme.SUCCESS,
             )
+            if self._ai_ctrl and AI_AVAILABLE and self.ctrl.mem.pm:
+                self._ai_ctrl.state_reader = GameStateReader(
+                    self.ctrl.mem.pm,
+                    self.ctrl.base_address,
+                    self.ctrl.module_base,
+                )
         except Exception as exc:
             self._status_dot.config(fg=Theme.DANGER)
             self._pid_label.config(text="")
@@ -1595,6 +1831,11 @@ class TrainerApp:
 
     def cleanup_and_exit(self) -> None:
         self._save_config(silent=True)
+        if self._ai_ctrl:
+            try:
+                self._ai_ctrl.stop()
+            except Exception:
+                pass
         try:
             self.ctrl.detach()
         except Exception:
